@@ -19,7 +19,7 @@ import (
 	"strings"
 	"text/template"
 	"time"	
-        "syscall"
+    "syscall"	
 
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
@@ -353,6 +353,10 @@ func (d *Driver) Create() error {
 
 	// Enable Shared Folders
 	vmrun("-gu", B2DUser, "-gp", B2DPass, "enableSharedFolders", d.vmxPath())
+	
+	//
+	copyAutomountShareScript(d)
+	
 
 	var shareName, shareDir, guestFolder, guestCompatLink string // TODO configurable at some point
 	switch runtime.GOOS {
@@ -360,12 +364,7 @@ func (d *Driver) Create() error {
 		shareName = "Home"
 		shareDir = "/Home"
 		guestFolder = "/Users"
-		guestCompatLink = "/Home"
-	case "windows":
-		shareName = "Users"
-		shareDir = `C:\Users\`
-		guestFolder = "/Users"
-		guestCompatLink = "/c/Users"
+		guestCompatLink = "/Home"	
 	}
 
 	if shareDir != "" {
@@ -386,17 +385,7 @@ func (d *Driver) Create() error {
 		}
 	}
 	
-	
-    for _,letter := range GetHostDriveVolumes() {
-	   shareName = letter+":\\"
-	   guestFolder = "/" + strings.ToLower(letter)
-       vmrun("-gu", B2DUser, "-gp", B2DPass, "addSharedFolder", d.vmxPath(), shareName, letter+":\\")
-	   command := "[ ! -d " + guestFolder + " ]&& sudo mkdir " + guestFolder +
-	  	   ";[ -f /usr/local/bin/vmhgfs-fuse ]&& sudo /usr/local/bin/vmhgfs-fuse -o allow_other .host:/" +
-		   shareName + " " + guestFolder + " || sudo mount -t vmhgfs .host:/" + shareName + " " + guestFolder
-  	   log.Debug(command)
-	   vmrun("-gu", B2DUser, "-gp", B2DPass, "runScriptInGuest", d.vmxPath(), "/bin/sh", command)
-    }
+	mountSharedDriveVolumes(d, true)
 	
 	return nil
 }
@@ -417,12 +406,7 @@ func (d *Driver) Start() error {
 		shareName = "Home"
 		shareDir = "/Home"
 		guestFolder = "/Users"
-		guestCompatLink = "/Home"
-	case "windows":
-		shareName = "Users"
-		shareDir = `C:\Users\`
-		guestFolder = "/Users"
-		guestCompatLink = "/c/Users"
+		guestCompatLink = "/Home"	
 	}
 
 	if shareDir != "" {
@@ -443,15 +427,7 @@ func (d *Driver) Start() error {
 		}
 	}
 	
-    for _,letter := range GetHostDriveVolumes() {
-	   shareName = letter+":\\"
-	   guestFolder = "/" + strings.ToLower(letter)           
-	   command := "[ ! -d " + guestFolder + " ]&& sudo mkdir " + guestFolder +
-	  	   ";[ -f /usr/local/bin/vmhgfs-fuse ]&& sudo /usr/local/bin/vmhgfs-fuse -o allow_other .host:/" +
-		   shareName + " " + guestFolder + " || sudo mount -t vmhgfs .host:/" + shareName + " " + guestFolder
-  	   log.Debug(command)
-	   vmrun("-gu", B2DUser, "-gp", B2DPass, "runScriptInGuest", d.vmxPath(), "/bin/sh", command)
-    }
+    mountSharedDriveVolumes(d, false)
 
 	return nil
 }
@@ -483,12 +459,7 @@ func (d *Driver) Restart() error {
 		shareName = "Home"
 		shareDir = "/Home"
 		guestFolder = "/Users"
-		guestCompatLink = "/Home"
-	case "windows":
-		shareName = "Users"
-		shareDir = `C:\Users\`
-		guestFolder = "/Users"
-		guestCompatLink = "/c/Users"
+		guestCompatLink = "/Home"	
 	}
 
 	if shareDir != "" {
@@ -509,15 +480,7 @@ func (d *Driver) Restart() error {
 		}
 	}
 	
-    for _,letter := range GetHostDriveVolumes() {
-	   shareName := letter+":\\"
-	   guestFolder = "/" + strings.ToLower(letter)           
-	   command := "[ ! -d " + guestFolder + " ]&& sudo mkdir " + guestFolder +
-	  	   ";[ -f /usr/local/bin/vmhgfs-fuse ]&& sudo /usr/local/bin/vmhgfs-fuse -o allow_other .host:/" +
-		   shareName + " " + guestFolder + " || sudo mount -t vmhgfs .host:/" + shareName + " " + guestFolder
-  	   log.Debug(command)
-	   vmrun("-gu", B2DUser, "-gp", B2DPass, "runScriptInGuest", d.vmxPath(), "/bin/sh", command)
-    }
+	mountSharedDriveVolumes(d, false)
 
 	return err
 }
@@ -719,7 +682,7 @@ func executeSSHCommand(command string, d *Driver) error {
 	return nil
 }
 
-func GetHostDriveVolumes() ( [] string) {
+func getHostDriveVolumes() ( [] string) {
     kernel32, _ := syscall.LoadLibrary("kernel32.dll")
     getLogicalDrivesHandle, _ := syscall.GetProcAddress(kernel32, "GetLogicalDrives")
 
@@ -741,4 +704,67 @@ func GetHostDriveVolumes() ( [] string) {
     	}
     }    
     return drives;
+}
+
+func mountSharedDriveVolumes(d *Driver, createShare bool) {
+ 
+ var volumeLabel, shareName, mountPoint, command string
+ for _,letter := range getHostDriveVolumes() {
+       volumeLabel =  letter+":\\"
+	   shareName = strings.ToLower(letter)
+	   mountPoint = "/" + strings.ToLower(letter)
+	   if createShare {
+	     vmrun("-gu", B2DUser, "-gp", B2DPass, "addSharedFolder", d.vmxPath(), shareName, volumeLabel)
+	   }
+	   command = "sudo mkdir -p " + mountPoint + 
+	       ";[ -f /usr/local/bin/vmhgfs-fuse ]&& sudo /usr/local/bin/vmhgfs-fuse -o allow_other .host:/" + shareName + " " + mountPoint + 
+		   " || sudo mount -t vmhgfs .host:/" + shareName + " " + mountPoint
+  	   log.Debug(command)
+	   vmrun("-gu", B2DUser, "-gp", B2DPass, "runScriptInGuest", d.vmxPath(), "/bin/sh", command)
+ }
+ 
+}
+
+
+func copyAutomountShareScript(d *Driver){
+  var scriptContent = 
+`#!/bin/sh
+alphabet="a b c d e f g h i j k l m n o p q r s t u v w x y z"
+
+SYSTYPE=$(cat /sys/class/dmi/id/sys_vendor | grep -ic vmware)
+ 
+if [ "$SYSTYPE" -gt 0 ]; then
+  # Check mountpoint for Shared Folders
+  if [ -d /mnt/hgfs ]; then
+
+    for word in $(ls /mnt/hgfs); do
+      if [ ! -d /${word} ] && [ "$(echo -n ${word}|wc -c)" == "1" ]; then
+        mkdir -p /${word}
+        mount /mnt/hgfs/${word} /${word}
+      fi
+    done
+		
+	for letter in $alphabet 
+	do		
+		test -d /mnt/hgfs/${letter} && 
+		[ $(ls -1 /${letter} 2>/dev/null|wc -l) -eq 0 ] &&
+		[ $(ls -1 /mnt/hgfs/${letter} 2>/dev/null|wc -l) -gt 0 ] &&
+		/usr/local/bin/vmhgfs-fuse -o allow_other .host:/${letter} /${letter}
+	done
+	
+  fi	
+fi
+`
+  var scriptFilename = d.ResolveStorePath("vmware_automount")
+    
+  file, err := os.Create(scriptFilename)
+  if err != nil {
+      return
+  }
+  defer file.Close()
+
+  file.WriteString(scriptContent)
+  file.Chmod(0755)
+  
+  vmrun("-gu", B2DUser, "-gp", B2DPass, "CopyFileFromHostToGuest", d.vmxPath(), scriptFilename, "/etc/rc.d/vmware_automount")
 }
