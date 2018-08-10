@@ -18,7 +18,8 @@ import (
 	"runtime"
 	"strings"
 	"text/template"
-	"time"
+	"time"	
+        "syscall"
 
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
@@ -383,6 +384,19 @@ func (d *Driver) Create() error {
 			vmrun("-gu", B2DUser, "-gp", B2DPass, "runScriptInGuest", d.vmxPath(), "/bin/sh", command)
 		}
 	}
+	
+	
+        for letter := range GetHostDriveVolumes() {
+	   shareName = letter+":\"
+	   guestFolder = "/" + strings.ToLower(letter)
+           vmrun("-gu", B2DUser, "-gp", B2DPass, "addSharedFolder", d.vmxPath(), shareName, guestFolder)
+	   command := "[ ! -d " + guestFolder + " ]&& sudo mkdir " + guestFolder +
+	  	   ";[ -f /usr/local/bin/vmhgfs-fuse ]&& sudo /usr/local/bin/vmhgfs-fuse -o allow_other .host:/" +
+		   shareName + " " + guestFolder + " || sudo mount -t vmhgfs .host:/" + shareName + " " + guestFolder
+  	   log.Debug(command)
+	   vmrun("-gu", B2DUser, "-gp", B2DPass, "runScriptInGuest", d.vmxPath(), "/bin/sh", command)
+        }
+	
 	return nil
 }
 
@@ -427,6 +441,16 @@ func (d *Driver) Start() error {
 			vmrun("-gu", B2DUser, "-gp", B2DPass, "runScriptInGuest", d.vmxPath(), "/bin/sh", command)
 		}
 	}
+	
+       for letter := range GetHostDriveVolumes() {
+	   shareName = letter+":\"
+	   guestFolder = "/" + strings.ToLower(letter)           
+	   command := "[ ! -d " + guestFolder + " ]&& sudo mkdir " + guestFolder +
+	  	   ";[ -f /usr/local/bin/vmhgfs-fuse ]&& sudo /usr/local/bin/vmhgfs-fuse -o allow_other .host:/" +
+		   shareName + " " + guestFolder + " || sudo mount -t vmhgfs .host:/" + shareName + " " + guestFolder
+  	   log.Debug(command)
+	   vmrun("-gu", B2DUser, "-gp", B2DPass, "runScriptInGuest", d.vmxPath(), "/bin/sh", command)
+        }
 
 	return nil
 }
@@ -483,6 +507,16 @@ func (d *Driver) Restart() error {
 			vmrun("-gu", B2DUser, "-gp", B2DPass, "runScriptInGuest", d.vmxPath(), "/bin/sh", command)
 		}
 	}
+	
+        for letter := range GetHostDriveVolumes() {
+	   shareName = letter+":\"
+	   guestFolder = "/" + strings.ToLower(letter)           
+	   command := "[ ! -d " + guestFolder + " ]&& sudo mkdir " + guestFolder +
+	  	   ";[ -f /usr/local/bin/vmhgfs-fuse ]&& sudo /usr/local/bin/vmhgfs-fuse -o allow_other .host:/" +
+		   shareName + " " + guestFolder + " || sudo mount -t vmhgfs .host:/" + shareName + " " + guestFolder
+  	   log.Debug(command)
+	   vmrun("-gu", B2DUser, "-gp", B2DPass, "runScriptInGuest", d.vmxPath(), "/bin/sh", command)
+        }
 
 	return err
 }
@@ -682,4 +716,33 @@ func executeSSHCommand(command string, d *Driver) error {
 	log.Debugf("Stdout from executeSSHCommand: %s", b.String())
 
 	return nil
+}
+
+func GetHostDriveVolumes() (drives []string) {
+    kernel32, _ := syscall.LoadLibrary("kernel32.dll")
+    getLogicalDrivesHandle, _ := syscall.GetProcAddress(kernel32, "GetLogicalDrives")
+
+    var drives []string
+
+    if ret, _, callErr := syscall.Syscall(uintptr(getLogicalDrivesHandle), 0, 0, 0, 0); callErr != 0 {
+        // handle error
+    } else {
+        drives = bitsToDrives(uint32(ret))
+    }
+
+    fmt.Printf("%v", drives)
+    return 
+}
+
+func bitsToDrives(bitMap uint32) (drives []string) {
+    availableDrives := []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"}
+
+    for i := range availableDrives {
+        if bitMap & 1 == 1 {
+            drives = append(drives, availableDrives[i])
+        }
+        bitMap >>= 1
+    }
+
+    return
 }
