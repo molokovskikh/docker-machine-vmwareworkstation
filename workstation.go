@@ -390,7 +390,7 @@ func (d *Driver) Create() error {
     for _,letter := range GetHostDriveVolumes() {
 	   shareName = letter+":\\"
 	   guestFolder = "/" + strings.ToLower(letter)
-       vmrun("-gu", B2DUser, "-gp", B2DPass, "addSharedFolder", d.vmxPath(), shareName, guestFolder)
+       vmrun("-gu", B2DUser, "-gp", B2DPass, "addSharedFolder", d.vmxPath(), shareName, letter+":\\")
 	   command := "[ ! -d " + guestFolder + " ]&& sudo mkdir " + guestFolder +
 	  	   ";[ -f /usr/local/bin/vmhgfs-fuse ]&& sudo /usr/local/bin/vmhgfs-fuse -o allow_other .host:/" +
 		   shareName + " " + guestFolder + " || sudo mount -t vmhgfs .host:/" + shareName + " " + guestFolder
