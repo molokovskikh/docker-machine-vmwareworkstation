@@ -30,6 +30,7 @@ import (
 	cryptossh "golang.org/x/crypto/ssh"
 )
 
+//Consts
 const (
 	B2DUser        = "docker"
 	B2DPass        = "tcuser"
