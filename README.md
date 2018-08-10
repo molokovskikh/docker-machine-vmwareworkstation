@@ -203,8 +203,8 @@ first need:
 To build the plugin executable binary, run these commands:
 
 ```bash
-$ go get -d github.com/pecigonzalo/docker-machine-vmwareworkstation
-$ cd $GOPATH/github.com/pecigonzalo/docker-machine-vmwareworkstation
+$ go get -d github.com/molokovskikh/docker-machine-vmwareworkstation
+$ cd $GOPATH/github.com/molokovskikh/docker-machine-vmwareworkstation
 $ make
 ```
 
