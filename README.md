@@ -205,7 +205,7 @@ To build the plugin executable binary, run these commands:
 ```bash
 $ go get -d github.com/molokovskikh/docker-machine-vmwareworkstation
 $ cd $GOPATH/github.com/molokovskikh/docker-machine-vmwareworkstation
-$ cd $GOPATH/src/github.com/molokovskikh/docker-machine-vmwareworkstation # в новых версия Go 1.13.*
+$ cd  $(go env GOPATH)/src/github.com/molokovskikh/docker-machine-vmwareworkstation # в новых версия Go 1.13.*
 $ make
 ```
 
