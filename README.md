@@ -116,10 +116,14 @@ fi
 "${VMWARE_WORKSTATION_HOME}/vmrun.exe" list | grep \""${VM}"\" &> /dev/null
 VM_EXISTS_CODE=$?
 
+
+"${VMWARE_WORKSTATION_HOME}/vmrun.exe" list | grep "${VM}" &> /dev/null
+VM_EXISTS_CODE=$?
+
 set -e
 
 STEP="Checking if machine $VM exists"
-if [ $VM_EXISTS_CODE -eq 1 ]; then
+if [ $VM_EXISTS_CODE -eq 1 ] && [ ! -f ~/.docker/machine/machines/"${VM}"/"${VM}".vmx ]; then  
   "${DOCKER_MACHINE}" rm -f "${VM}" &> /dev/null || :
   rm -rf ~/.docker/machine/machines/"${VM}"
   #set proxy variables inside virtual docker machine if they exist in host environment
