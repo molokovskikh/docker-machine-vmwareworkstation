@@ -52,7 +52,7 @@ add it to your $PATH.
 2. Add environment variable VMWARE_WORKSTATION_HOME=C:\Program Files (x86)\VMware\VMware Workstation
 3.  Replace contents of `C:\Program Files\Docker Toolbox\start.sh` with this script.
 
-    ```none
+```none
  #!/bin/bash
 
 trap '[ "$?" -eq 0 ] || read -p "Looks like something went wrong in step ´$STEP´... Press any key to continue..."' EXIT
