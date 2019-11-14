@@ -181,7 +181,7 @@ else
 fi
 ```
 
-    Credit for the above script to [@gtirloni](https://github.com/gtirloni)
+    Credit for the above script to [@molokovskikh](https://github.com/molokovskikh)
 
 ## Usage
 
