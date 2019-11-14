@@ -185,7 +185,7 @@ fi
 
 ## Usage
 
-### You can just run Docker Quickstart Terminal on your desktop, and to see running virtual machine was put into %USERPROFILE% \.docker\machine\machines\default\default.vmx.
+### You can just run Docker Quickstart Terminal on your desktop, and to see running virtual machine was put into %USERPROFILE%\\.docker\machine\machines\default\default.vmx.
 ### Also you can open that file by means VMWareWorkstation UI.
 
 Official documentation for Docker Machine is available
